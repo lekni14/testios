@@ -51,8 +51,11 @@ $B['GOOGLE_PLAY_LINK'] = "https://play.google.com/store/apps/details?id=app.kkde
 
 // Your domain (host) and url!
 
-$B['APP_HOST'] = "testios.birdday.me";
-$B['APP_URL'] = "http://testios.birdday.me";
+// $B['APP_HOST'] = "testios.birdday.me";
+// $B['APP_URL'] = "http://testios.birdday.me";
+
+$B['APP_HOST'] = "localhost"; /// ทดสอบแก้ 12/04/60
+$B['APP_URL'] = "http://localhost";
 
 // Client ID. เขียนดัก ป้องกันไม่อนุญาตให้ใช้ API
 

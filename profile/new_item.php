@@ -27,12 +27,12 @@
     $price = 0;
     $allow_comments = "";
 
-    if (isset($_FILES['uploaded_file']['name'])) {
+    if (isset($_FILES['file']['name'])) {
 
         $currentTime = time();
-        $uploaded_file_ext = @pathinfo($_FILES['uploaded_file']['name'], PATHINFO_EXTENSION);
+        $uploaded_file_ext = @pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
 
-        if (@move_uploaded_file($_FILES['uploaded_file']['tmp_name'], TEMP_PATH."{$currentTime}.".$uploaded_file_ext)) {
+        if (@move_uploaded_file($_FILES['file']['tmp_name'], TEMP_PATH."{$currentTime}.".$uploaded_file_ext)) {
 
             $response = array();
 
@@ -42,7 +42,9 @@
             if ($response['error'] === false) {
 
                 $result = array("error" => false,
-                                "normalPhotoUrl" => $response['imgUrl']);
+                                "normalPhotoUrl" => $response['imgUrl'],
+                                "images_name" => $response['imgName']
+                              );
 
                 $imgUrl = $result['normalPhotoUrl'];
                 $previewImgUrl = $result['normalPhotoUrl'];
@@ -50,10 +52,14 @@
 
             unset($imgLib);
         }
+        echo json_encode($result);
+        exit();
     }
 
     if (!empty($_POST)) {
-
+      // print_r($_POST['images']);
+        $imgUrl = reset($_POST['images']);
+      // echo $first_value;
         $authToken = isset($_POST['authenticity_token']) ? $_POST['authenticity_token'] : '';
         $title = isset($_POST['title']) ? $_POST['title'] : '';
         $description = isset($_POST['description']) ? $_POST['description'] : '';
@@ -101,13 +107,24 @@
 
             $item = new items($dbo);
             $item->setRequestFrom(auth::getCurrentUserId());
-
-            $result = $item->add($category_id, $title, $description, $content, $imgUrl, $previewImgUrl, $allow_comments, $price);
-
+            // add($category, $title, $description, $content, $imgUrl, $previewImgUrl, $allowComments = 1, $price = 0, $postArea = "", $postCountry = "", $postCity = "", $postZipcode = "", $postLat = "0.000000", $postLng = "0.000000", $model, $year, $note)
+            $result = $item->add($category_id, $title, $description, $content, $imgUrl, $previewImgUrl, $allow_comments, $price, $postArea = "", $postCountry = "", $postCity = "", $postZipcode = "", $postLat = "0.000000", $postLng = "0.000000", $model= null, $year= null, $note= null);
+            
             if ($result['error'] === false) {
+              foreach ($_POST['images'] as $key => $image) {
 
-                header("Location: /view_item.php/?id=".$result['itemId']);
-                exit;
+                $image = helper::clearText($image);
+                $image = helper::escapeText($image);
+
+                $images = new images($dbo);
+                $images->setRequestFrom(auth::getCurrentUserId());
+                $images->add($result['itemId'], $image, $image, $image);
+
+
+              }
+
+              header("Location: /view_item.php/?id=".$result['itemId']);
+              exit;
             }
         }
     }
@@ -147,7 +164,6 @@
                                         <h4><?php echo $LANG['page-create-item']; ?></h4>
                                     </div>
                                 </div>
-
                                 <form method="post" action="/profile/new_item.php" enctype="multipart/form-data">
 
                                     <input type="hidden" name="authenticity_token" value="<?php echo helper::getAuthenticityToken(); ?>">
@@ -181,13 +197,22 @@
                                         </div>
 
                                         <div class="file-field input-field col s12">
-                                            <div class="btn">
+                                          <!-- <input type="hidden" name="uploaded_file"> -->
+                                          <div id="dZUpload" class="dropzone">
+                                            <?php echo $LANG['label-image']; ?>
+                                            <div class="dz-default dz-message"><?php echo $LANG['label-image-placeholder']; ?></div>
+                                          </div>
+                                            <!-- <div class="btn">
                                                 <span><?php echo $LANG['label-image']; ?></span>
                                                 <input type="file" name="uploaded_file">
                                             </div>
                                             <div class="file-path-wrapper">
+                                              <div id="dZUpload" class="dropzone">
+                                                Drop files here or click here
+                                                  <div class="dz-default dz-message"></div>
+                                              </div>
                                                 <input class="file-path validate" type="text" placeholder="<?php echo $LANG['label-image-placeholder']; ?>">
-                                            </div>
+                                            </div> -->
                                         </div>
 
                                         <div class="input-field col s12">
@@ -241,8 +266,52 @@
 ?>
 
 <script type="text/javascript">
+$(document).ready(function () {
+    Dropzone.autoDiscover = false;
+    $("#dZUpload").dropzone({
+        url: "new_item.php",
+        addRemoveLinks: true,
+        maxFiles: 4,
+        success: function (file, response) {
+          var json = jQuery.parseJSON(response)
+          console.log(json)
+          file.previewElement.querySelector("img").alt = json.images_name;
+          file.previewElement.querySelector("img").src = json.normalPhotoUrl;
+          addInput(json.normalPhotoUrl,json.images_name)
+        },
+        removedfile: function (file, response) {
+          var name = file.previewElement.querySelector("img").getAttribute("alt");
+          removeInput(name)
+          // console.log(name);
+          // $.ajax({
+          //     type: 'POST',
+          //     url: 'delete.php',
+          //     data: "id="+name,
+          //     dataType: 'html'
+          // });
+          var _ref;
+          return (_ref = file.previewElement) != null ? _ref.parentNode.removeChild(file.previewElement) : void 0;
+        },
+        error: function (file, response) {
+          console.log(response);
+          file.previewElement.classList.add("dz-error");
+        }
+    });
+});
+function addInput(normalPhotoUrl,images_name) {
 
-
+  $('<input>').attr({ type: 'hidden', id: cut(images_name), name: 'images['+cut(images_name)+']', value: normalPhotoUrl}).appendTo('form');
+}
+function removeInput(images_name) {
+  console.log(images_name);
+  $("#"+cut(images_name)).remove();
+  // $('<input>').attr({ type: 'hidden', id: images_name, name: 'bar', value: normalPhotoUrl}).appendTo('form');
+}
+function cut(str)
+{
+  var res = str.split(".");
+  return res[0];
+}
 </script>
 
 </body>

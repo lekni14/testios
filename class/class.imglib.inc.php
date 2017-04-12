@@ -150,7 +150,7 @@ class imglib extends db_connect
 
             @unlink(TEMP_PATH.$imgOrigin);
         }
-
+        $result['imgName'] = $imgOrigin;
         return $result;
     }
 
@@ -205,10 +205,8 @@ class imglib extends db_connect
 
                 $result['imgUrl'] = $response['fileUrl'];
             }
-
             @unlink(TEMP_PATH.$imgOrigin);
         }
-
         return $result;
     }
 

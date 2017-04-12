@@ -11,8 +11,8 @@
 
     <script type="text/javascript" src="/js/jquery-2.1.1.js"></script>
 
-    <script type="text/javascript" src="/js/jquery.cookie.js"></script>
-
+    <script type="text/javascript" src="/js/jquery.cookie.js"></script>    
+    <link rel="stylesheet" href="https://rawgit.com/enyo/dropzone/master/dist/dropzone.css">
     <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link type="text/css" rel="stylesheet" href="/css/materialize.css"  media="screen,projection"/>
 
