@@ -55,32 +55,34 @@
         $imgUrl = helper::escapeText($imgUrl);
     }
 
-    if (strlen($imgUrl) == 0 && isset($_FILES['uploaded_file']['name'])) {
-
-        $currentTime = time();
-        $uploaded_file_ext = @pathinfo($_FILES['uploaded_file']['name'], PATHINFO_EXTENSION);
-
-        if (@move_uploaded_file($_FILES['uploaded_file']['tmp_name'], TEMP_PATH."{$currentTime}.".$uploaded_file_ext)) {
-
-            $response = array();
-
-            $imgLib = new imglib($dbo);
-            $response = $imgLib->createItemImg(TEMP_PATH."{$currentTime}.".$uploaded_file_ext, TEMP_PATH."{$currentTime}.".$uploaded_file_ext);
-
-            if ($response['error'] === false) {
-
-                $result = array("error" => false,
-                                "normalPhotoUrl" => $response['imgUrl']);
-
-                $imgUrl = $result['normalPhotoUrl'];
-                $previewImgUrl = $result['normalPhotoUrl'];
-            }
-
-            unset($imgLib);
-        }
-    }
+    // if (strlen($imgUrl) == 0 && isset($_FILES['uploaded_file']['name'])) {
+    //
+    //     $currentTime = time();
+    //     $uploaded_file_ext = @pathinfo($_FILES['uploaded_file']['name'], PATHINFO_EXTENSION);
+    //
+    //     if (@move_uploaded_file($_FILES['uploaded_file']['tmp_name'], TEMP_PATH."{$currentTime}.".$uploaded_file_ext)) {
+    //
+    //         $response = array();
+    //
+    //         $imgLib = new imglib($dbo);
+    //         $response = $imgLib->createItemImg(TEMP_PATH."{$currentTime}.".$uploaded_file_ext, TEMP_PATH."{$currentTime}.".$uploaded_file_ext);
+    //
+    //         if ($response['error'] === false) {
+    //
+    //             $result = array("error" => false,
+    //                             "normalPhotoUrl" => $response['imgUrl']);
+    //
+    //             $imgUrl = $result['normalPhotoUrl'];
+    //             $previewImgUrl = $result['normalPhotoUrl'];
+    //         }
+    //
+    //         unset($imgLib);
+    //     }
+    // }
 
     if (!empty($_POST)) {
+
+      $imgUrl = reset($_POST['images']);
 
         $authToken = isset($_POST['authenticity_token']) ? $_POST['authenticity_token'] : '';
         $title = isset($_POST['title']) ? $_POST['title'] : '';
@@ -130,6 +132,19 @@
             $result = $item->edit($itemId, $category, $title, $imgUrl, $content, $allow_comments, $price);
 
             if ($result['error'] === false) {
+              // print_r($result);
+              // exit();
+              foreach ($_POST['images'] as $key => $image) {
+
+                $image = helper::clearText($image);
+                $image = helper::escapeText($image);
+
+                $images = new images($dbo);
+                $images->setRequestFrom(auth::getCurrentUserId());
+                $images->add($itemId, $image, $image, $image);
+
+
+              }
 
                 header("Location: /view_item.php/?id=".$itemId);
                 exit;
@@ -205,14 +220,18 @@
                                     </div>
 
                                     <div class="input-field col s12 m7 image-preview">
-                                        <div class="card">
+                                      <div id="dZUpload" class="dropzone">
+                                        <?php echo $LANG['label-image']; ?>
+                                        <div class="dz-default dz-message"><?php echo $LANG['label-image-placeholder']; ?></div>
+                                      </div>
+                                        <!-- <div class="card">
                                             <div class="card-image">
                                                 <img src="<?php echo $itemInfo['imgUrl']; ?>">
                                             </div>
                                             <div class="card-action">
                                                 <a href="javascript:void(0)" onclick="Action.remove(); return false;"><?php echo $LANG['action-remove']; ?></a>
                                             </div>
-                                        </div>
+                                        </div> -->
                                     </div>
 
                                     <div class="file-field input-field col s12" style="display: none">
@@ -288,8 +307,65 @@
 ?>
 
 <script type="text/javascript">
+$(document).ready(function () {
+    Dropzone.autoDiscover = false;
+    $("#dZUpload").dropzone({
+        url: "/profile/upload.php?action=upload",
+        addRemoveLinks: true,
+        maxFiles: 4,
+        success: function (file, response) {
+          var json = jQuery.parseJSON(response)
+          file.previewElement.querySelector("img").alt = json.images_name;
+          file.previewElement.querySelector("img").src = json.normalPhotoUrl;
+          addInput(json.normalPhotoUrl,json.images_name)
+        },
+        removedfile: function (file, response) {
+          // var name = file.previewElement.querySelector("id").getAttribute("alt");
+          var id = 'id='+$(file.previewElement).attr('id');
+          $.ajax({
+                    url: '/profile/upload.php?action=delete',
+                    data:id,
+                    type: 'post'
+                }).done(function (result) {//console.log(result.filename);
+                  console.log(result)
+                });
+          var _ref;
+          return (_ref = file.previewElement) != null ? _ref.parentNode.removeChild(file.previewElement) : void 0;
+        },
+        error: function (file, response) {
+          console.log(response);
+          file.previewElement.classList.add("dz-error");
+        },
+        init: function() {
+          var thisDropzone = this;
+          $.getJSON('/profile/upload.php?action=list&id=<?=$_GET['id']?>', function(response) {
+            // var json = jQuery.parseJSON(response);
+            $.each(response, function(key,value){
+              console.log(value)
+                var mockFile = { name: value.name, size: 1000 };
+                thisDropzone.emit("addedfile", mockFile);
+                thisDropzone.createThumbnailFromUrl(mockFile, value.imgUrl);
+                thisDropzone.emit("complete", mockFile);
+                $(mockFile.previewElement).prop('id', value.id);
+            });
+          });
+        }
+    });
+});
+function addInput(normalPhotoUrl,images_name) {
 
-
+  $('<input>').attr({ type: 'hidden', id: cut(images_name), name: 'images['+cut(images_name)+']', value: normalPhotoUrl}).appendTo('form');
+}
+function removeInput(images_name) {
+  console.log(images_name);
+  $("#"+cut(images_name)).remove();
+  // $('<input>').attr({ type: 'hidden', id: images_name, name: 'bar', value: normalPhotoUrl}).appendTo('form');
+}
+function cut(str)
+{
+  var res = str.split(".");
+  return res[0];
+}
 </script>
 
 </body>
