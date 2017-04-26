@@ -135,7 +135,10 @@
               // print_r($result);
               // exit();
               foreach ($_POST['images'] as $key => $image) {
-
+                $index++;
+                if($index === 1){
+                  continue;
+                }
                 $image = helper::clearText($image);
                 $image = helper::escapeText($image);
 

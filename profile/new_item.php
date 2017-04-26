@@ -57,7 +57,6 @@
     }
 
     if (!empty($_POST)) {
-      // print_r($_POST['images']);
         $imgUrl = reset($_POST['images']);
       // echo $first_value;
         $authToken = isset($_POST['authenticity_token']) ? $_POST['authenticity_token'] : '';
@@ -109,9 +108,15 @@
             $item->setRequestFrom(auth::getCurrentUserId());
             // add($category, $title, $description, $content, $imgUrl, $previewImgUrl, $allowComments = 1, $price = 0, $postArea = "", $postCountry = "", $postCity = "", $postZipcode = "", $postLat = "0.000000", $postLng = "0.000000", $model, $year, $note)
             $result = $item->add($category_id, $title, $description, $content, $imgUrl, $previewImgUrl, $allow_comments, $price, $postArea = "", $postCountry = "", $postCity = "", $postZipcode = "", $postLat = "0.000000", $postLng = "0.000000", $model= null, $year= null, $note= null);
-            
+
             if ($result['error'] === false) {
+              $index = 0;
               foreach ($_POST['images'] as $key => $image) {
+                $index++;
+                if($index === 1){
+                  continue;
+                }
+
 
                 $image = helper::clearText($image);
                 $image = helper::escapeText($image);
@@ -122,7 +127,8 @@
 
 
               }
-
+              // print_r($result);
+              // exit();
               header("Location: /view_item.php/?id=".$result['itemId']);
               exit;
             }
